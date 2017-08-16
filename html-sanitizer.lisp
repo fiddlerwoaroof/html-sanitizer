@@ -57,11 +57,12 @@
     node)
 
   (:method ((node plump:comment))
-    (plump:remove-child node))
+    (when (plump:parent node)
+      (plump:remove-child node)))
 
-  (:method :after ((node plump:element))
-           (map nil #'sanitize-node
-                (plump:children node)))
+  (:method :after ((node plump:nesting-node))
+    (map nil #'sanitize-node
+        (plump:children node)))
 
   (:method ((node plump:element))
     (if (member (plump:tag-name node)
@@ -72,14 +73,13 @@
              unless (member attr +safe-attrs+ :test 'equalp) do
                (plump:remove-attribute node attr))
           node)
-        (plump:remove-child node))))
+        (when (plump:parent node)
+          (plump:remove-child node)))))
 
 (defun sanitize (html)
   (let ((result (plump:parse html))
         (*serialization-mode* :html))
-    (map nil
-         #'sanitize-node 
-         (plump:children result))
+    (sanitize-node result)
     (plump:serialize result nil)))
 
 (defpackage :html-sanitizer.test
